@@ -1,5 +1,7 @@
 import os
 import sys
+import platform
+import getpass
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -43,10 +45,17 @@ class WelcomeDashboard:
             return
 
         # Header Info
+        try:
+            username = getpass.getuser()
+            nodename = platform.node()
+        except Exception:
+            username = "user"
+            nodename = "local"
+
         header_text = Text.assemble(
             (f"Version {self.version}", "bold cyan"),
             (" | ", "dim"),
-            (f"{os.getlogin()}@{os.uname().nodename}", "dim yellow")
+            (f"{username}@{nodename}", "dim yellow")
         )
         self.console.print(header_text, justify="left")
 
