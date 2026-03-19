@@ -75,9 +75,13 @@ class AteneaMCPServer:
         collection_name = os.path.basename(directory_path.rstrip(os.sep))
         
         try:
-            # 1. Ensure backend is status "ok"
+            # 1. Ensure backend is status "ok" and already indexed
             status = await self.http_client.get_status()
             collections = status.get("collections", [])
+            
+            if collection_name not in collections:
+                logger.debug(f"Skipping auto-indexing for non-indexed codebase: {collection_name}")
+                return
             
             # 2. Incremental Indexing
             logger.info(f"Indexing updates for: {directory_path} ({collection_name})")
@@ -154,10 +158,14 @@ class AteneaMCPServer:
         except Exception as e:
             return f"Error: Could not connect to Atenea backend at {self.http_client.server_url}. Is the server running?\nDetails: {e}"
 
-        # 3. Incremental Indexing (just-in-time check)
+        # 3. Check if already indexed
+        if not is_indexed:
+            return "This code base is not indexed, tell the user to index it first using the 'index' command."
+
+        # 4. Incremental Indexing (just-in-time check)
         await self.sync_index(directory_path)
 
-        # 4. Query the backend
+        # 5. Query the backend
         try:
             result = await self.http_client.query(information_request, collection=collection_name)
             return result.get("results", "No results found.")
