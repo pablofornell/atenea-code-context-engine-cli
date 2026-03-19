@@ -12,7 +12,7 @@ def get_project_root(start_path: Optional[str] = None) -> str:
     current = os.path.abspath(start_path)
     
     # Common markers for project root
-    markers = {".git", "pyproject.toml", "Makefile", "setup.py", "package.json"}
+    markers = {".git", "pyproject.toml", "Makefile", "setup.py", "install.py", "package.json"}
     
     while True:
         if any(os.path.exists(os.path.join(current, m)) for m in markers):
@@ -22,3 +22,5 @@ def get_project_root(start_path: Optional[str] = None) -> str:
         if parent == current: # Reached filesystem root
             return os.path.abspath(start_path)
         current = parent
+    
+    return os.path.abspath(start_path)
