@@ -18,6 +18,12 @@ class AteneaHTTPClient:
             logger.error(f"Error connecting to server status: {e}")
             raise
 
+    async def get_codebases(self) -> Dict:
+        try:
+            response = await self.client.get(f"{self.server_url}/api/list")
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
             logger.error(f"Error listing codebases: {e}")
             raise
 
