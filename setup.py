@@ -19,17 +19,31 @@ def setup():
     is_windows = platform.system() == "Windows"
     python_cmd = "python" if is_windows else "python3"
     venv_dir = ".venv"
-    pip_cmd = os.path.join(venv_dir, "Scripts", "pip") if is_windows else os.path.join(venv_dir, "bin", "pip")
+    venv_python = os.path.join(venv_dir, "Scripts", "python") if is_windows else os.path.join(venv_dir, "bin", "python")
     
     print(f"--- Setting up Atenea CLI ({platform.system()}) ---")
 
-    # 1. Create Venv
+    # 1. Clean up stale build artifacts that can cause issues on Windows
+    print("--- Cleaning up old build artifacts ---")
+    for d in ["build", "atenea_cli.egg-info", "atenea.egg-info"]:
+        if os.path.exists(d):
+            import shutil
+            try:
+                shutil.rmtree(d)
+            except Exception:
+                pass
+
+    # 2. Create Venv
     if not os.path.exists(venv_dir):
         if not run_command(f"{python_cmd} -m venv {venv_dir}"):
             return
 
-    # 2. Install dependencies in editable mode
-    if not run_command(f"{pip_cmd} install -e ."):
+    # 3. Upgrade pip and setuptools (prevents many metadata issues)
+    print("--- Upgrading pip and setuptools ---")
+    run_command(f"{venv_python} -m pip install --upgrade pip setuptools")
+
+    # 4. Install dependencies in editable mode
+    if not run_command(f"{venv_python} -m pip install -e ."):
         return
 
     print("\n--- Setup Complete! ---")
