@@ -18,20 +18,28 @@ class AteneaHTTPClient:
             logger.error(f"Error connecting to server status: {e}")
             raise
 
-    async def get_codebases(self) -> Dict:
-        try:
-            response = await self.client.get(f"{self.server_url}/api/list")
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
             logger.error(f"Error listing codebases: {e}")
             raise
 
-    async def index_files(self, files: List[Dict[str, str]], collection: Optional[str] = None) -> Dict:
+    async def get_file_hashes(self, collection: Optional[str] = None) -> Dict[str, str]:
+        try:
+            params = {}
+            if collection:
+                params["collection"] = collection
+            response = await self.client.get(f"{self.server_url}/api/index/hashes", params=params)
+            response.raise_for_status()
+            return response.json().get("hashes", {})
+        except Exception as e:
+            logger.error(f"Error fetching file hashes: {e}")
+            return {}
+
+    async def index_files(self, files: List[Dict[str, str]], collection: Optional[str] = None, deleted_files: Optional[List[str]] = None) -> Dict:
         try:
             payload: Dict[str, Any] = {"files": files}
             if collection:
                 payload["collection"] = collection
+            if deleted_files:
+                payload["deleted_files"] = deleted_files
             response = await self.client.post(
                 f"{self.server_url}/api/index",
                 json=payload

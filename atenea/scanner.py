@@ -1,26 +1,11 @@
 import os
 import logging
+import hashlib
 from typing import List, Dict
 
 logger = logging.getLogger("atenea.scanner")
 
-# Shared ignore rules
-IGNORED_DIRS = {
-    ".git", "build", "node_modules", ".gradle", ".venv", "venv", 
-    ".idea", "bin", "obj", "out", "metadata", ".next", "dist", 
-    "target", "__pycache__", ".vscode", ".pytest_cache", ".mypy_cache"
-}
-BINARY_EXTS = {
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".zip", 
-    ".exe", ".dll", ".so", ".bin", ".jar", ".class", ".aar", ".xcf",
-    ".svg", ".ttf", ".otf", ".woff", ".woff2", ".7z", ".tar", ".gz",
-    ".dmg", ".iso", ".sqlite"
-}
-IGNORED_FILES = {
-    "gradlew", "gradlew.bat", 
-    ".gitignore", "gradle.properties", "settings.gradle", "package-lock.json",
-    "yarn.lock", "pnpm-lock.yaml", ".DS_Store"
-}
+from .constants import IGNORED_DIRS, IGNORED_FILES, BINARY_EXTS
 
 class Scanner:
     def scan_directory(self, directory: str) -> List[Dict[str, str]]:
@@ -45,7 +30,12 @@ class Scanner:
                     with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
                         if content.strip():
-                            files_to_send.append({"path": rel_path, "content": content})
+                            content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+                            files_to_send.append({
+                                "path": rel_path, 
+                                "content": content,
+                                "content_hash": content_hash
+                            })
                 except Exception as e:
                     logger.warning(f"Could not read {full_path}: {e}")
         
