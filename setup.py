@@ -25,22 +25,23 @@ def setup():
 
     # 1. Clean up stale build artifacts that can cause issues on Windows
     print("--- Cleaning up old build artifacts ---")
-    for d in ["build", "atenea_cli.egg-info", "atenea.egg-info"]:
+    import shutil
+    for d in ["build", "atenea_cli.egg-info", "atenea.egg-info", "dist"]:
         if os.path.exists(d):
-            import shutil
             try:
                 shutil.rmtree(d)
+                print(f"  Deleted {d}")
             except Exception:
                 pass
 
-    # 2. Create Venv
-    if not os.path.exists(venv_dir):
-        if not run_command(f"{python_cmd} -m venv {venv_dir}"):
-            return
+    # 2. Create Venv (Force clear if exists to avoid broken states)
+    print("--- Creating Virtual Environment ---")
+    if not run_command(f"{python_cmd} -m venv --clear {venv_dir}"):
+        return
 
-    # 3. Upgrade pip and setuptools (prevents many metadata issues)
+    # 3. Upgrade pip and setuptools and install 'build'
     print("--- Upgrading pip and setuptools ---")
-    run_command(f"{venv_python} -m pip install --upgrade pip setuptools")
+    run_command(f"{venv_python} -m pip install --upgrade pip setuptools build")
 
     # 4. Install dependencies in editable mode
     if not run_command(f"{venv_python} -m pip install -e ."):
