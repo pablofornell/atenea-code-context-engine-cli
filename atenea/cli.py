@@ -9,6 +9,7 @@ from tqdm import tqdm
 from .http_client import AteneaHTTPClient
 from .scanner import Scanner
 from .utils import get_project_root
+from .ui import WelcomeDashboard
 
 # Setup logging
 logging.basicConfig(level=logging.WARNING)
@@ -19,15 +20,21 @@ class AteneaCLI:
         self.http_client = AteneaHTTPClient(server_url)
         self.scanner = Scanner()
 
-    async def status(self):
+    async def status(self, dashboard: bool = False):
         try:
             data = await self.http_client.get_status()
-            print(f"Server: {data.get('engine', 'Unknown')}")
-            print(f"Status: {data.get('status', 'Unknown')}")
-            collections = data.get('collections', [])
-            print(f"Available Codebases: {', '.join(collections) if collections else 'None'}")
+            if dashboard:
+                WelcomeDashboard().render(data)
+            else:
+                print(f"Server: {data.get('engine', 'Unknown')}")
+                print(f"Status: {data.get('status', 'Unknown')}")
+                collections = data.get('collections', [])
+                print(f"Available Codebases: {', '.join(collections) if collections else 'None'}")
         except Exception as e:
-            print(f"Error connecting to server: {e}")
+            if dashboard:
+                WelcomeDashboard().render(None)
+            else:
+                print(f"Error connecting to server: {e}")
             sys.exit(1)
 
     async def list_codebases(self):
@@ -203,7 +210,7 @@ def main():
     
     async def run_command():
         if args.command == "status":
-            await cli.status()
+            await cli.status(dashboard=True)
         elif args.command == "list":
             await cli.list_codebases()
         elif args.command == "clean":
@@ -215,6 +222,8 @@ def main():
             directory = args.directory or get_project_root()
             name = args.name or os.path.basename(os.path.abspath(directory))
             await cli.index(directory, name, full=args.full)
+        elif args.command is None:
+            await cli.status(dashboard=True)
         else:
             parser.print_help()
         await cli.close()
