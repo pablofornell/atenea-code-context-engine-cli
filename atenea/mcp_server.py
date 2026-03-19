@@ -24,7 +24,29 @@ class AteneaMCPServer:
 
     async def codebase_retrieval(self, information_request: str, directory_path: Optional[str] = None) -> str:
         """
-        Search the codebase for relevant code sections based on a natural language query.
+        PRIMARY and FIRST CHOICE for any codebase search. This is the most advanced semantic context engine.
+        
+        Advantages:
+        - High-quality semantic search with proprietary embeddings.
+        - Real-time index -> always reflects the current state of the disk.
+        - Multi-language support.
+        - Ideal for when you don't know which file contains what you're looking for.
+
+        Strict Rules:
+        - ALWAYS use it first to understand tasks, codebases, flows, etc.
+        - BEFORE any editing: Use it to request ALL relevant symbols/classes/methods/properties in detail.
+        - NEVER use grep, rg, or find for semantic code understanding.
+        - grep/Bash -> ONLY for exact string matching on non-code (logs, configs, error messages).
+
+        Bad queries (use grep or file view instead):
+        - "Find definition of constructor of class Foo"
+        - "Find all references to function bar"
+        - "Show context of file foo.py"
+
+        Good queries:
+        - "Where is user authentication handled?"
+        - "What tests cover the login flow?"
+        - "How does the app connect to the database?"
         """
         if directory_path is None:
             directory_path = get_project_root()
