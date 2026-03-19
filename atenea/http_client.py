@@ -1,6 +1,6 @@
 import httpx
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 
 logger = logging.getLogger("atenea.http_client")
 
@@ -18,11 +18,23 @@ class AteneaHTTPClient:
             logger.error(f"Error connecting to server status: {e}")
             raise
 
-    async def index_files(self, files: List[Dict[str, str]]) -> Dict:
+    async def get_codebases(self) -> Dict:
         try:
+            response = await self.client.get(f"{self.server_url}/api/list")
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error listing codebases: {e}")
+            raise
+
+    async def index_files(self, files: List[Dict[str, str]], collection: Optional[str] = None) -> Dict:
+        try:
+            payload: Dict[str, Any] = {"files": files}
+            if collection:
+                payload["collection"] = collection
             response = await self.client.post(
                 f"{self.server_url}/api/index",
-                json={"files": files}
+                json=payload
             )
             response.raise_for_status()
             return response.json()
@@ -30,11 +42,14 @@ class AteneaHTTPClient:
             logger.error(f"Error indexing files: {e}")
             raise
 
-    async def query(self, text: str, limit: int = 20) -> Dict:
+    async def query(self, text: str, limit: int = 20, collection: Optional[str] = None) -> Dict:
         try:
+            payload = {"query": text, "limit": limit}
+            if collection:
+                payload["collection"] = collection
             response = await self.client.post(
                 f"{self.server_url}/api/query",
-                json={"query": text, "limit": limit}
+                json=payload
             )
             response.raise_for_status()
             return response.json()
@@ -42,9 +57,16 @@ class AteneaHTTPClient:
             logger.error(f"Error querying backend: {e}")
             raise
 
-    async def clean(self) -> Dict:
+    async def clean(self, collection: Optional[str] = None) -> Dict:
         try:
-            response = await self.client.delete(f"{self.server_url}/api/index")
+            payload = {}
+            if collection:
+                payload["collection"] = collection
+            response = await self.client.request(
+                "DELETE",
+                f"{self.server_url}/api/index",
+                json=payload
+            )
             response.raise_for_status()
             return response.json()
         except Exception as e:

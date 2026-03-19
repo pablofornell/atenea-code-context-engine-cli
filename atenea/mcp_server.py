@@ -30,34 +30,38 @@ class AteneaMCPServer:
             directory_path = get_project_root()
             logger.info(f"Auto-detected project root: {directory_path}")
 
-        # 1. Ensure backend is status "ok"
+        # 1. Derive collection name (codebase) from directory path
+        collection_name = os.path.basename(directory_path.rstrip(os.sep))
+        
+        # 2. Ensure backend is status "ok"
         try:
             status = await self.http_client.get_status()
-            is_indexed = status.get("indexed", False)
+            collections = status.get("collections", [])
+            is_indexed = collection_name in collections
         except Exception as e:
             return f"Error: Could not connect to Atenea backend at {self.http_client.server_url}. Is the server running?\nDetails: {e}"
 
-        # 2. Check if we need to index
+        # 3. Check if we need to index
         if directory_path not in self.indexed_paths and not is_indexed:
-            logger.info(f"Triggering indexing for: {directory_path}")
+            logger.info(f"Triggering indexing for: {directory_path} into {collection_name}")
             files = self.scanner.scan_directory(directory_path)
             if files:
                 # Send in batches of 5 (matching cli.py logic)
                 batch_size = 5
                 for i in range(0, len(files), batch_size):
                     batch = files[i : i + batch_size]
-                    await self.http_client.index_files(batch)
+                    await self.http_client.index_files(batch, collection=collection_name)
                 self.indexed_paths.add(directory_path)
-                logger.info("Indexing complete.")
+                logger.info(f"Indexing complete for {collection_name}.")
             else:
                 return "Error: No indexable files found in the directory."
         elif directory_path not in self.indexed_paths:
             self.indexed_paths.add(directory_path)
-            logger.info(f"Using existing index for: {directory_path}")
+            logger.info(f"Using existing index for: {collection_name}")
 
-        # 3. Query the backend
+        # 4. Query the backend
         try:
-            result = await self.http_client.query(information_request)
+            result = await self.http_client.query(information_request, collection=collection_name)
             return result.get("results", "No results found.")
         except Exception as e:
             return f"Error querying Atenea backend: {e}"

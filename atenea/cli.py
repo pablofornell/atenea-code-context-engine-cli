@@ -1,6 +1,7 @@
 import os
 import asyncio
 import argparse
+from typing import Optional
 import sys
 import logging
 from tqdm import tqdm
@@ -23,29 +24,46 @@ class AteneaCLI:
             data = await self.http_client.get_status()
             print(f"Server: {data.get('engine', 'Unknown')}")
             print(f"Status: {data.get('status', 'Unknown')}")
-            print(f"Indexed: {'Yes' if data.get('indexed') else 'No'}")
+            collections = data.get('collections', [])
+            print(f"Available Codebases: {', '.join(collections) if collections else 'None'}")
         except Exception as e:
             print(f"Error connecting to server: {e}")
             sys.exit(1)
 
-    async def clean(self):
+    async def list_codebases(self):
         try:
-            await self.http_client.clean()
-            print("Index cleared successfully.")
+            data = await self.http_client.get_codebases()
+            collections = data.get("collections", [])
+            if not collections:
+                print("No codebases found.")
+            else:
+                print("Available codebases:")
+                for c in collections:
+                    print(f"  - {c}")
+        except Exception as e:
+            print(f"Error listing codebases: {e}")
+            sys.exit(1)
+
+    async def clean(self, collection: Optional[str] = None):
+        try:
+            await self.http_client.clean(collection)
+            print(f"Index {collection or 'default'} cleared successfully.")
         except Exception as e:
             print(f"Error clearing index: {e}")
             sys.exit(1)
 
-    async def query(self, query_text: str, limit: int = 20):
+    async def query(self, query_text: str, limit: int = 20, collection: Optional[str] = None):
         try:
-            data = await self.http_client.query(query_text, limit)
+            data = await self.http_client.query(query_text, limit, collection)
             print(data.get("results", "No results found."))
         except Exception as e:
             print(f"Error querying: {e}")
             sys.exit(1)
 
-    async def index(self, directory: str):
+    async def index(self, directory: str, collection: Optional[str] = None):
         print(f"Scanning directory: {directory}")
+        if collection:
+            print(f"Targeting codebase: {collection}")
         files_to_send = self.scanner.scan_directory(directory)
 
         if not files_to_send:
@@ -66,7 +84,7 @@ class AteneaCLI:
                 
                 for attempt in range(3):
                     try:
-                        await self.http_client.index_files(batch)
+                        await self.http_client.index_files(batch, collection=collection)
                         success = True
                         break
                     except Exception as e:
@@ -95,16 +113,22 @@ def main():
     subparsers.add_parser("status", help="Check server status")
     
     # Clean
-    subparsers.add_parser("clean", help="Clear the index")
+    clean_parser = subparsers.add_parser("clean", help="Clear the index")
+    clean_parser.add_argument("--name", help="Specify codebase name to clear")
+    
+    # List
+    subparsers.add_parser("list", help="List available codebases")
     
     # Query
     query_parser = subparsers.add_parser("query", help="Query the context engine")
     query_parser.add_argument("text", help="Query text")
     query_parser.add_argument("--limit", type=int, default=20, help="Number of results to return")
+    query_parser.add_argument("--name", help="Specify codebase name to search in")
     
     # Index
     index_parser = subparsers.add_parser("index", help="Index a directory")
     index_parser.add_argument("directory", nargs="?", default=None, help="Directory path to index (defaults to current project root)")
+    index_parser.add_argument("--name", help="Specify codebase name (defaults to 'atenea_code')")
 
     # Serve (MCP Server)
     subparsers.add_parser("serve", help="Start the MCP server for IDE integration")
@@ -122,13 +146,17 @@ def main():
     async def run_command():
         if args.command == "status":
             await cli.status()
+        elif args.command == "list":
+            await cli.list_codebases()
         elif args.command == "clean":
-            await cli.clean()
+            await cli.clean(args.name)
         elif args.command == "query":
-            await cli.query(args.text, args.limit)
+            name = args.name or os.path.basename(os.path.abspath(get_project_root()))
+            await cli.query(args.text, args.limit, name)
         elif args.command == "index":
             directory = args.directory or get_project_root()
-            await cli.index(directory)
+            name = args.name or os.path.basename(os.path.abspath(directory))
+            await cli.index(directory, name)
         else:
             parser.print_help()
         await cli.close()
