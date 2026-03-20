@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger("atenea.mcp_server")
 
 class CodebaseWatcher(FileSystemEventHandler):
-    def __init__(self, mcp_server, directory_path: str, debounce_seconds: float = 22.0):
+    def __init__(self, mcp_server, directory_path: str, debounce_seconds: float = 2.0):
         self.mcp_server = mcp_server
         self.directory_path = directory_path
         self.debounce_seconds = debounce_seconds
@@ -86,32 +86,52 @@ class AteneaMCPServer:
             
             # 2. Incremental Indexing
             logger.info(f"Indexing updates for: {directory_path} ({collection_name})")
-            all_local_files = self.scanner.scan_directory(directory_path)
-            if not all_local_files:
+            all_local_metadata = self.scanner.scan_directory(directory_path)
+            if not all_local_metadata:
                 logger.warning("No indexable files found.")
                 return
 
             server_hashes = await self.http_client.get_file_hashes(collection_name)
-            local_files_map = {f["path"]: f for f in all_local_files}
-            files_to_send = []
+            
+            files_to_send_metadata = []
             deleted_files = []
             
-            for path, f in local_files_map.items():
+            for f in all_local_metadata:
+                path = f["path"]
                 if path not in server_hashes or f["content_hash"] != server_hashes[path]:
-                    files_to_send.append(f)
+                    files_to_send_metadata.append(f)
             
+            local_paths = {f["path"] for f in all_local_metadata}
             for path in server_hashes:
-                if path not in local_files_map:
+                if path not in local_paths:
                     deleted_files.append(path)
 
-            if files_to_send or deleted_files:
-                logger.info(f"Auto-syncing: {len(files_to_send)} changed, {len(deleted_files)} deleted.")
+            if files_to_send_metadata or deleted_files:
+                logger.info(f"Auto-syncing: {len(files_to_send_metadata)} changed, {len(deleted_files)} deleted.")
+                
+                # Process in batches to limit memory usage even further
                 batch_size = 5
-                first_batch = files_to_send[:batch_size]
-                await self.http_client.index_files(first_batch, collection=collection_name, deleted_files=deleted_files)
-                for i in range(batch_size, len(files_to_send), batch_size):
-                    batch = files_to_send[i : i + batch_size]
-                    await self.http_client.index_files(batch, collection=collection_name)
+                for i in range(0, len(files_to_send_metadata), batch_size):
+                    batch_metadata = files_to_send_metadata[i : i + batch_size]
+                    batch_to_send = []
+                    for meta in batch_metadata:
+                        content = self.scanner.get_file_content(directory_path, meta["path"])
+                        if content:
+                            batch_to_send.append({
+                                "path": meta["path"],
+                                "content": content,
+                                "content_hash": meta["content_hash"]
+                            })
+                    
+                    # Send deletes only with the first batch
+                    current_deleted = deleted_files if i == 0 else []
+                    if batch_to_send or current_deleted:
+                        await self.http_client.index_files(batch_to_send, collection=collection_name, deleted_files=current_deleted)
+                
+                # Handle case where there are ONLY deletions
+                if not files_to_send_metadata and deleted_files:
+                    await self.http_client.index_files([], collection=collection_name, deleted_files=deleted_files)
+
                 logger.info(f"Auto-sync complete for {collection_name}.")
             else:
                 logger.info(f"No changes to sync for {collection_name}.")

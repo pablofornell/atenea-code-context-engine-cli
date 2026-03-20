@@ -1,7 +1,7 @@
 import os
 import logging
 import hashlib
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 logger = logging.getLogger("atenea.scanner")
 
@@ -13,7 +13,7 @@ class Scanner:
             logger.error(f"Error: {directory} is not a directory.")
             return []
 
-        files_to_send = []
+        files_metadata = []
         for root, dirs, files in os.walk(directory):
             dirs[:] = [d for d in dirs if d not in IGNORED_DIRS]
             for file in files:
@@ -27,16 +27,25 @@ class Scanner:
                 rel_path = os.path.relpath(full_path, directory)
                 
                 try:
+                    # Only read for hashing, don't store content
                     with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
                         if content.strip():
                             content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
-                            files_to_send.append({
+                            files_metadata.append({
                                 "path": rel_path, 
-                                "content": content,
                                 "content_hash": content_hash
                             })
                 except Exception as e:
-                    logger.warning(f"Could not read {full_path}: {e}")
+                    logger.warning(f"Could not read {full_path} for hashing: {e}")
         
-        return files_to_send
+        return files_metadata
+
+    def get_file_content(self, directory: str, rel_path: str) -> Optional[str]:
+        full_path = os.path.join(directory, rel_path)
+        try:
+            with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+                return f.read()
+        except Exception as e:
+            logger.error(f"Error reading file {full_path}: {e}")
+            return None
