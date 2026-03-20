@@ -6,3 +6,7 @@ dist/
 *.egg-info/
 .env
 .DS_Store
+
+# Atenea Config
+.atenea/conf.json
+.atenea/config.json

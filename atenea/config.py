@@ -17,8 +17,8 @@ def get_config_dir() -> Path:
     return config_dir
 
 def get_config_path() -> Path:
-    """Returns the configuration file path (~/.atenea/config.json)."""
-    return get_config_dir() / "config.json"
+    """Returns the configuration file path (~/.atenea/conf.json)."""
+    return get_config_dir() / "conf.json"
 
 def load_config() -> Dict[str, Any]:
     """Loads the configuration from the JSON file, creating it if it doesn't exist."""

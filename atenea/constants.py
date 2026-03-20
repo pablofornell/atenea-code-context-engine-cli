@@ -2,7 +2,7 @@
 
 IGNORED_DIRS = {
     ".git", "build", "node_modules", ".gradle", ".venv", "venv", 
-    ".idea", "bin", "obj", "out", "metadata", ".next", "dist", 
+    ".idea", "bin", "obj", "out", "metadata", ".metadata", ".next", "dist", 
     "target", "__pycache__", ".vscode", ".pytest_cache", ".mypy_cache"
 }
 

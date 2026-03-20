@@ -15,7 +15,7 @@ Set the server URL persistently for this repository:
 ```bash
 atenea config set-server http://your-server:8080
 ```
-This creates a `.atenea/config.json` file in the project root.
+This creates a `.atenea/conf.json` file in the project root.
 
 ### Index a Directory
 ```bash
@@ -53,7 +53,7 @@ To use Atenea as an MCP server in your IDE, add the following to your MCP config
 
 - **command**: `atenea` (ensure it's in your PATH or use absolute path to the executable).
 - **args**: `["serve"]` starts the MCP bridge.
-- **ATENEA_SERVER**: (Optional) URL to your Atenea server. Defaults to the value in `.atenea/config.json` or `http://localhost:8080`.
+- **ATENEA_SERVER**: (Optional) URL to your Atenea server. Defaults to the value in `.atenea/conf.json` or `http://localhost:8080`.
 
 ## Backend Requirement
 This CLI requires an **Atenea Server** instance running. See the `atenea-server` package for setup instructions.
