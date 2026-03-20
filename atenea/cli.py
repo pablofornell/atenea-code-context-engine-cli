@@ -132,9 +132,20 @@ class AteneaCLI:
         
         with tqdm(total=total_batches, desc="Indexing") as pbar:
             # Handle the first batch specially to include deleted files
-            first_batch = files_to_send[:batch_size]
+            first_batch_metadata = files_to_send[:batch_size]
+            first_batch_to_send = []
+            for meta in first_batch_metadata:
+                content = self.scanner.get_file_content(directory, meta["path"])
+                if content:
+                    first_batch_to_send.append({
+                        "path": meta["path"],
+                        "content": content,
+                        "content_hash": meta["content_hash"]
+                    })
+            
             try:
-                await self.http_client.index_files(first_batch, collection=collection, deleted_files=deleted_files)
+                if first_batch_to_send or deleted_files:
+                    await self.http_client.index_files(first_batch_to_send, collection=collection, deleted_files=deleted_files)
                 pbar.update(1)
             except Exception as e:
                 tqdm.write(f"  ⚠ First batch failed: {e}")
@@ -143,13 +154,26 @@ class AteneaCLI:
 
             # Handle remaining batches
             for i in range(batch_size, len(files_to_send), batch_size):
-                batch = files_to_send[i : i + batch_size]
-                batch_num = i // batch_size + 1
-                success = False
+                batch_metadata = files_to_send[i : i + batch_size]
+                batch_to_send = []
+                for meta in batch_metadata:
+                    content = self.scanner.get_file_content(directory, meta["path"])
+                    if content:
+                        batch_to_send.append({
+                            "path": meta["path"],
+                            "content": content,
+                            "content_hash": meta["content_hash"]
+                        })
                 
+                batch_num = i // batch_size + 1
+                if not batch_to_send:
+                    pbar.update(1)
+                    continue
+                    
+                success = False
                 for attempt in range(3):
                     try:
-                        await self.http_client.index_files(batch, collection=collection)
+                        await self.http_client.index_files(batch_to_send, collection=collection)
                         success = True
                         break
                     except Exception as e:
