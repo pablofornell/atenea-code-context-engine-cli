@@ -12,6 +12,7 @@ from .http_client import AteneaHTTPClient
 from .scanner import Scanner
 from .utils import get_project_root
 from .constants import is_ignored
+from .config import get_server_url
 
 # Setup logging to stderr
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -191,7 +192,7 @@ class AteneaMCPServer:
                 self.watcher.stop()
 
 def main():
-    server_url = os.environ.get("ATENEA_SERVER", "http://localhost:8080")
+    server_url = get_server_url()
     server = AteneaMCPServer(server_url)
     server.run()
 

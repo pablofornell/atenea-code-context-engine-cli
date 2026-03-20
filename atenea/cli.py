@@ -10,6 +10,7 @@ from .http_client import AteneaHTTPClient
 from .scanner import Scanner
 from .utils import get_project_root
 from .ui import WelcomeDashboard
+from .config import get_server_url, save_config, load_config
 
 # Setup logging
 logging.basicConfig(level=logging.WARNING)
@@ -169,7 +170,7 @@ class AteneaCLI:
 
 def main():
     parser = argparse.ArgumentParser(description="Atenea Context Engine CLI Client")
-    parser.add_argument("--server", default=os.environ.get("ATENEA_SERVER", "http://localhost:8080"), help="Server URL (default: http://localhost:8080)")
+    parser.add_argument("--server", default=None, help=f"Server URL (default from config: {get_server_url()})")
     
     subparsers = parser.add_subparsers(dest="command", help="Commands")
     
@@ -198,6 +199,13 @@ def main():
     # Serve (MCP Server)
     subparsers.add_parser("serve", help="Start the MCP server for IDE integration")
 
+    # Config
+    config_parser = subparsers.add_parser("config", help="Manage configuration")
+    config_subparsers = config_parser.add_subparsers(dest="config_command", help="Config commands")
+    
+    set_server_parser = config_subparsers.add_parser("set-server", help="Set the server URL")
+    set_server_parser.add_argument("url", help="Server URL (e.g. http://localhost:8080)")
+
     args = parser.parse_args()
     
     if args.command == "serve":
@@ -206,7 +214,19 @@ def main():
         run_mcp()
         return
 
-    cli = AteneaCLI(args.server)
+    server_url = args.server or get_server_url()
+    
+    if args.command == "config":
+        if args.config_command == "set-server":
+            config = load_config()
+            config["server_url"] = args.url
+            save_config(config)
+            print(f"Server URL updated to: {args.url}")
+        else:
+            config_parser.print_help()
+        return
+
+    cli = AteneaCLI(server_url)
     
     async def run_command():
         if args.command == "status":

@@ -76,7 +76,7 @@ class WelcomeDashboard:
         tips = [
             ("⚡", "Quick Start: [bold cyan]atenea index[/bold cyan] to index your current directory."),
             ("🔍", "Search: [bold cyan]atenea query \"your question\"[/bold cyan] to retrieve context."),
-            ("⚙️", " Settings: Environment [bold yellow]ATENEA_SERVER[/bold yellow] to change server URL."),
+            ("⚙️", " Settings: [bold cyan]atenea config set-server <url>[/bold cyan] to change server URL."),
             ("🛠️", " MCP: [bold cyan]atenea serve[/bold cyan] to start the MCP server for IDEs."),
         ]
 
