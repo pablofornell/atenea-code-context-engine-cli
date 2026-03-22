@@ -170,18 +170,20 @@ class AteneaMCPServer:
 
         # 1. Derive collection name (codebase) from directory path
         collection_name = os.path.basename(directory_path.rstrip(os.sep))
-        
+
         # 2. Ensure backend is status "ok"
         try:
             status = await self.http_client.get_status()
             collections = status.get("collections", [])
             is_indexed = collection_name in collections
+            logger.debug(f"Collection lookup: '{collection_name}' in {collections} = {is_indexed}")
         except Exception as e:
             return f"Error: Could not connect to Atenea backend at {self.http_client.server_url}. Is the server running?\nDetails: {e}"
 
         # 3. Check if already indexed
         if not is_indexed:
-            return "This code base is not indexed, tell the user to index it first using the 'index' command."
+            logger.warning(f"Codebase not found: '{collection_name}'. Available: {collections}. CWD: {os.getcwd()}")
+            return f"This codebase '{collection_name}' is not indexed. Available codebases: {collections}. Please index it first using: atenea index"
 
         # 4. Incremental Indexing (just-in-time check)
         await self.sync_index(directory_path)
