@@ -1,6 +1,5 @@
 import asyncio
 import os
-import logging
 import time
 import threading
 from typing import Optional
@@ -13,10 +12,11 @@ from .scanner import Scanner
 from .utils import get_project_root
 from .constants import is_ignored
 from .config import get_server_url
+from .logging_config import setup_logging, get_logger
 
-# Setup logging to stderr
-logging.basicConfig(level=logging.INFO, format='%(message)s')
-logger = logging.getLogger("atenea.mcp_server")
+# Setup logging for MCP server (INFO level for status messages)
+setup_logging(level="INFO")
+logger = get_logger(__name__)
 
 class CodebaseWatcher(FileSystemEventHandler):
     def __init__(self, mcp_server, directory_path: str, debounce_seconds: float = 2.0):

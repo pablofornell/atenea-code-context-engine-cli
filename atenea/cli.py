@@ -3,7 +3,6 @@ import asyncio
 import argparse
 from typing import Optional
 import sys
-import logging
 from tqdm import tqdm
 
 from .http_client import AteneaHTTPClient
@@ -11,10 +10,11 @@ from .scanner import Scanner
 from .utils import get_project_root
 from .ui import WelcomeDashboard
 from .config import get_server_url, save_config, load_config
+from .logging_config import setup_logging, get_logger
 
-# Setup logging
-logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger("atenea.cli")
+# Setup logging once at module import
+setup_logging()
+logger = get_logger(__name__)
 
 class AteneaCLI:
     def __init__(self, server_url: str):
