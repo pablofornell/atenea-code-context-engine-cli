@@ -164,6 +164,9 @@ class AteneaMCPServer:
         - "What tests cover the login flow?"
         - "How does the app connect to the database?"
         """
+        # Lazily start the file watcher on first tool call (captures the running loop)
+        self._ensure_watcher()
+
         if directory_path is None:
             directory_path = get_project_root()
             logger.info(f"Auto-detected project root: {directory_path}")
@@ -195,18 +198,16 @@ class AteneaMCPServer:
         except Exception as e:
             return f"Error querying Atenea backend: {e}"
 
-    def run(self):
-        # Start watcher in the background
+    def _ensure_watcher(self):
+        """Lazily start the file watcher, capturing the running event loop."""
+        if self.loop is not None:
+            return
+        self.loop = asyncio.get_running_loop()
         root = get_project_root()
-        try:
-            self.loop = asyncio.get_event_loop()
-        except RuntimeError:
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
-            
         self.watcher = CodebaseWatcher(self, root)
         self.watcher.start()
-        
+
+    def run(self):
         try:
             self.mcp.run()
         finally:
