@@ -5,9 +5,20 @@ from typing import List, Dict, Optional, Any
 logger = logging.getLogger("atenea.http_client")
 
 class AteneaHTTPClient:
-    def __init__(self, server_url: str):
+    def __init__(
+        self,
+        server_url: str,
+        api_key: str | None = None,
+        verify_ssl: bool = True,
+        ca_cert: str | None = None,
+    ):
         self.server_url = server_url.rstrip("/")
-        self.client = httpx.AsyncClient(timeout=300.0)
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        # ssl parameter: False disables verification, a path trusts a custom CA
+        ssl: bool | str = ca_cert if ca_cert else verify_ssl
+        self.client = httpx.AsyncClient(timeout=300.0, headers=headers, verify=ssl)
 
     async def get_status(self) -> Dict:
         try:

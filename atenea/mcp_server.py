@@ -11,7 +11,7 @@ from .http_client import AteneaHTTPClient
 from .scanner import Scanner
 from .utils import get_project_root
 from .constants import is_ignored
-from .config import get_server_url
+from .config import get_server_url, get_api_key, get_verify_ssl, get_ca_cert
 from .logging_config import setup_logging, get_logger
 
 # Setup logging for MCP server (INFO level for status messages)
@@ -61,9 +61,9 @@ class CodebaseWatcher(FileSystemEventHandler):
         )
 
 class AteneaMCPServer:
-    def __init__(self, server_url: str):
+    def __init__(self, server_url: str, api_key: str | None = None, verify_ssl: bool = True, ca_cert: str | None = None):
         self.mcp = FastMCP("Atenea Context Engine")
-        self.http_client = AteneaHTTPClient(server_url)
+        self.http_client = AteneaHTTPClient(server_url, api_key=api_key, verify_ssl=verify_ssl, ca_cert=ca_cert)
         self.scanner = Scanner()
         self.loop = None
         self.watcher = None
@@ -216,7 +216,10 @@ class AteneaMCPServer:
 
 def main():
     server_url = get_server_url()
-    server = AteneaMCPServer(server_url)
+    api_key = get_api_key()
+    verify_ssl = get_verify_ssl()
+    ca_cert = get_ca_cert()
+    server = AteneaMCPServer(server_url, api_key=api_key, verify_ssl=verify_ssl, ca_cert=ca_cert)
     server.run()
 
 if __name__ == "__main__":

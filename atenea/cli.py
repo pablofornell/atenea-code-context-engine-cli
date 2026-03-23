@@ -9,7 +9,7 @@ from .http_client import AteneaHTTPClient
 from .scanner import Scanner
 from .utils import get_project_root
 from .ui import WelcomeDashboard
-from .config import get_server_url, save_config, load_config
+from .config import get_server_url, get_api_key, get_verify_ssl, get_ca_cert, save_config, load_config
 from .logging_config import setup_logging, get_logger
 
 # Setup logging once at module import
@@ -17,8 +17,8 @@ setup_logging()
 logger = get_logger(__name__)
 
 class AteneaCLI:
-    def __init__(self, server_url: str):
-        self.http_client = AteneaHTTPClient(server_url)
+    def __init__(self, server_url: str, api_key: str | None = None, verify_ssl: bool = True, ca_cert: str | None = None):
+        self.http_client = AteneaHTTPClient(server_url, api_key=api_key, verify_ssl=verify_ssl, ca_cert=ca_cert)
         self.scanner = Scanner()
 
     async def status(self, dashboard: bool = False):
@@ -228,7 +228,16 @@ def main():
     config_subparsers = config_parser.add_subparsers(dest="config_command", help="Config commands")
     
     set_server_parser = config_subparsers.add_parser("set-server", help="Set the server URL")
-    set_server_parser.add_argument("url", help="Server URL (e.g. http://localhost:8080)")
+    set_server_parser.add_argument("url", help="Server URL (e.g. https://atenea.example.com)")
+
+    set_api_key_parser = config_subparsers.add_parser("set-api-key", help="Set the API key for server authentication")
+    set_api_key_parser.add_argument("key", help="API key for the Atenea server")
+
+    set_verify_ssl_parser = config_subparsers.add_parser("set-verify-ssl", help="Enable or disable SSL certificate verification")
+    set_verify_ssl_parser.add_argument("value", choices=["true", "false"], help="Set to 'false' when using a self-signed certificate")
+
+    set_ca_cert_parser = config_subparsers.add_parser("set-ca-cert", help="Set a custom CA certificate for SSL verification")
+    set_ca_cert_parser.add_argument("path", help="Path to the CA certificate file (e.g. ./caddy-root.crt)")
 
     args = parser.parse_args()
     
@@ -246,11 +255,29 @@ def main():
             config["server_url"] = args.url
             save_config(config)
             print(f"Server URL updated to: {args.url}")
+        elif args.config_command == "set-api-key":
+            config = load_config()
+            config["api_key"] = args.key
+            save_config(config)
+            print("API key saved.")
+        elif args.config_command == "set-verify-ssl":
+            config = load_config()
+            config["verify_ssl"] = args.value == "true"
+            save_config(config)
+            print(f"SSL verification set to: {args.value}")
+        elif args.config_command == "set-ca-cert":
+            config = load_config()
+            config["ca_cert"] = args.path
+            save_config(config)
+            print(f"CA certificate set to: {args.path}")
         else:
             config_parser.print_help()
         return
 
-    cli = AteneaCLI(server_url)
+    api_key = get_api_key()
+    verify_ssl = get_verify_ssl()
+    ca_cert = get_ca_cert()
+    cli = AteneaCLI(server_url, api_key=api_key, verify_ssl=verify_ssl, ca_cert=ca_cert)
     
     async def run_command():
         if args.command == "status":

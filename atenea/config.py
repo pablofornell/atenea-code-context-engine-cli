@@ -55,6 +55,57 @@ def get_server_url() -> str:
     env_url = os.environ.get("ATENEA_SERVER")
     if env_url:
         return env_url
-    
+
     config = load_config()
     return config.get("server_url", DEFAULT_CONFIG["server_url"])
+
+
+def get_api_key() -> str | None:
+    """
+    Resolves the API key following this precedence:
+    1. Environment variable ATENEA_API_KEY
+    2. Config file api_key
+    3. None (no authentication)
+    """
+    env_key = os.environ.get("ATENEA_API_KEY")
+    if env_key:
+        return env_key
+
+    config = load_config()
+    return config.get("api_key")
+
+
+def get_verify_ssl() -> bool:
+    """
+    Resolves SSL certificate verification following this precedence:
+    1. Environment variable ATENEA_VERIFY_SSL ("false" disables verification)
+    2. Config file verify_ssl
+    3. True (verification enabled by default)
+
+    Set to False only when using a self-signed certificate (public IP deployment).
+    """
+    env_val = os.environ.get("ATENEA_VERIFY_SSL")
+    if env_val is not None:
+        return env_val.lower() not in ("false", "0", "no")
+
+    config = load_config()
+    return config.get("verify_ssl", True)
+
+
+def get_ca_cert() -> str | None:
+    """
+    Resolves a custom CA certificate path following this precedence:
+    1. Environment variable ATENEA_CA_CERT
+    2. Config file ca_cert
+    3. None (use system CAs)
+
+    Use this to trust Caddy's self-signed root CA without disabling verification.
+    Export it with:
+      docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./caddy-root.crt
+    """
+    env_cert = os.environ.get("ATENEA_CA_CERT")
+    if env_cert:
+        return env_cert
+
+    config = load_config()
+    return config.get("ca_cert")
